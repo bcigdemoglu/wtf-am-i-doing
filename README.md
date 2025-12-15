@@ -1,55 +1,54 @@
-# WTF Am I Doing?
+# Weighted Temporal Forecaster (WTF) Am I Doing?
 
-**Weighted Temporal Forecaster** - A continuous screen activity diary using FastVLM.
+A macOS app that periodically captures your screen and uses AI to describe what you're doing. Creates a searchable activity diary in JSON format.
 
-## What is this?
+## Features
 
-A macOS application that:
-1. Takes screenshots of all your monitors periodically
-2. Runs them through Apple's FastVLM to understand what you're doing
-3. Saves a continuous diary of your activity in JSON format
-
-## Quick Start
-
-1. Double-click `launch.command` to start the app
-2. Click "Download Models" to set up FastVLM (first time only)
-3. Click "Play" to start recording
+- **Automatic screen capture** at configurable intervals (5s - 5min)
+- **Multiple AI backends**:
+  - FastVLM (local, runs on Apple Silicon/Intel via conda)
+  - Claude (via Claude CLI - opus, sonnet, haiku)
+- **Activity diary** saved as JSON with timestamps and inference times
+- **Clickable preview** - click thumbnail to open full screenshot
+- **Settings persistence** - remembers your preferences between sessions
+- **Resolution options** - High, Medium, Low to balance quality vs speed
 
 ## Requirements
 
-- macOS (Intel or Apple Silicon)
-- Python 3.10+
-- GitHub CLI (`gh`) for model download: `brew install gh`
+- macOS
+- Python 3.10+ with tkinter (`brew install python-tk@3.10`)
+- For FastVLM: conda (`brew install --cask miniconda`)
+- For Claude: Claude CLI
 
-## Manual Installation
+## Build
 
 ```bash
-# Install uv if needed
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Install the package
-uv venv
-uv pip install -e .
-
-# Run
-uv run python -m wtf_am_i_doing.main
+./build.sh
 ```
 
-## Diary Format
+## Run
 
-Entries are saved to `~/.wtf-am-i-doing/diary.json`:
-
-```json
-{
-  "entries": [
-    {
-      "timestamp": "2025-12-10T14:32:15.123Z",
-      "model": "fastvlm_0.5b_stage3",
-      "description": "User is writing Python code in VS Code..."
-    }
-  ]
-}
+```bash
+open "dist/WTF Am I Doing.app"
 ```
+
+On first run, grant **Screen Recording** permission when prompted (System Preferences > Privacy & Security > Screen Recording).
+
+## Usage
+
+1. Select a model from the dropdown
+2. For FastVLM models, click "Download FastVLM" first (one-time setup)
+3. Adjust interval and resolution as needed
+4. Click **Play** to start capturing
+5. Click **Open Diary** to view your activity log
+
+## Data Location
+
+All data is stored in `~/.wtf-am-i-doing/`:
+- `diary.json` - Activity entries
+- `error.json` - Error log
+- `settings_cached.json` - Your preferences
+- `app.log` - Debug log
 
 ## License
 

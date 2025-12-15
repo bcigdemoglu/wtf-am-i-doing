@@ -8,8 +8,8 @@ from typing import Any
 
 from .capture import MonitorInfo
 
-# Thread lock for file operations
-_file_lock = threading.Lock()
+# Thread lock for file operations (RLock allows same thread to re-acquire)
+_file_lock = threading.RLock()
 
 
 def load_diary(path: Path) -> dict[str, Any]:
@@ -66,6 +66,7 @@ def append_entry(
     description: str,
     monitor: MonitorInfo | None = None,
     is_single_monitor: bool = True,
+    inference_time_ms: int | None = None,
 ) -> dict[str, Any]:
     """
     Append a new entry to the diary.
@@ -76,6 +77,7 @@ def append_entry(
         description: VLM description of the screenshot
         monitor: Monitor information (None if single monitor)
         is_single_monitor: Whether this is a single-monitor setup
+        inference_time_ms: Time taken for inference in milliseconds
 
     Returns:
         The entry that was added
@@ -85,6 +87,9 @@ def append_entry(
         "model": model,
         "description": description,
     }
+
+    if inference_time_ms is not None:
+        entry["inference_ms"] = inference_time_ms
 
     # Only include monitor info for multi-monitor setups
     if not is_single_monitor and monitor is not None:
@@ -100,17 +105,17 @@ def append_entry(
 
 
 def append_error(
-    path: Path,
+    error_path: Path,
     model: str,
     error_message: str,
     monitor: MonitorInfo | None = None,
     is_single_monitor: bool = True,
 ) -> dict[str, Any]:
     """
-    Append an error entry to the diary.
+    Append an error entry to the error log file.
 
     Args:
-        path: Path to the diary JSON file
+        error_path: Path to the error JSON file
         model: Name of the model used
         error_message: Description of the error
         monitor: Monitor information (None if single monitor)
@@ -131,9 +136,9 @@ def append_error(
         entry["monitor_name"] = monitor.name
 
     with _file_lock:
-        data = load_diary(path)
+        data = load_diary(error_path)
         data["entries"].append(entry)
-        save_diary(path, data)
+        save_diary(error_path, data)
 
     return entry
 
@@ -147,13 +152,13 @@ def get_entry_count(path: Path) -> int:
     return len(data.get("entries", []))
 
 
-def get_error_count(path: Path) -> int:
-    """Get the number of error entries in the diary."""
-    if not path.exists():
+def get_error_count(error_path: Path) -> int:
+    """Get the number of error entries in the error file."""
+    if not error_path.exists():
         return 0
 
-    data = load_diary(path)
-    return sum(1 for entry in data.get("entries", []) if "error" in entry)
+    data = load_diary(error_path)
+    return len(data.get("entries", []))
 
 
 def get_last_entry(path: Path) -> dict[str, Any] | None:

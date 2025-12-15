@@ -1,6 +1,7 @@
 """Screenshot capture functionality."""
 
-import tempfile
+import logging
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -8,7 +9,9 @@ import mss
 import mss.tools
 from PIL import Image
 
-from .config import RESOLUTIONS
+from .config import RESOLUTIONS, TEMP_DIR
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -30,6 +33,24 @@ class Screenshot:
         """Remove the temporary screenshot file."""
         if self.image_path.exists():
             self.image_path.unlink()
+            logger.debug(f"Cleaned up screenshot: {self.image_path.name}")
+
+
+def cleanup_temp_dir() -> None:
+    """Clean up any leftover screenshot files from previous sessions."""
+    if not TEMP_DIR.exists():
+        return
+
+    count = 0
+    for f in TEMP_DIR.glob("wtf_monitor*.png"):
+        try:
+            f.unlink()
+            count += 1
+        except Exception as e:
+            logger.warning(f"Failed to delete {f}: {e}")
+
+    if count > 0:
+        logger.info(f"Cleaned up {count} leftover screenshot(s) from temp directory")
 
 
 def get_monitor_name(index: int) -> str:
@@ -56,10 +77,13 @@ def capture_monitors(resolution: str = "High") -> list[Screenshot]:
         # sct.monitors[0] is "all monitors combined"
         # sct.monitors[1:] are individual monitors
         monitors = sct.monitors[1:]  # Skip the combined view
+        logger.info(f"Found {len(monitors)} monitor(s)")
 
         for idx, monitor in enumerate(monitors, start=1):
+            logger.debug(f"Capturing monitor {idx}: {monitor}")
             # Capture the monitor
             sct_img = sct.grab(monitor)
+            logger.debug(f"Captured image size: {sct_img.size}")
 
             # Convert to PIL Image for resizing
             img = Image.frombytes("RGB", sct_img.size, sct_img.bgra, "raw", "BGRX")
@@ -70,14 +94,10 @@ def capture_monitors(resolution: str = "High") -> list[Screenshot]:
                 new_height = int(img.height * scale)
                 img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
 
-            # Save to temporary file
-            temp_file = tempfile.NamedTemporaryFile(
-                suffix=".png",
-                prefix=f"wtf_monitor{idx}_",
-                delete=False
-            )
-            img.save(temp_file.name, "PNG")
-            temp_file.close()
+            # Save to app's temp directory
+            TEMP_DIR.mkdir(parents=True, exist_ok=True)
+            temp_path = TEMP_DIR / f"wtf_monitor{idx}_{int(time.time() * 1000)}.png"
+            img.save(str(temp_path), "PNG")
 
             # Create monitor info
             monitor_info = MonitorInfo(
@@ -89,7 +109,7 @@ def capture_monitors(resolution: str = "High") -> list[Screenshot]:
 
             screenshots.append(Screenshot(
                 monitor=monitor_info,
-                image_path=Path(temp_file.name),
+                image_path=temp_path,
             ))
 
     return screenshots

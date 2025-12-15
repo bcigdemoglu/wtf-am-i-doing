@@ -7,18 +7,69 @@ from pathlib import Path
 
 # Paths
 APP_DIR = Path.home() / ".wtf-am-i-doing"
+TEMP_DIR = APP_DIR / "temp"
 FASTVLM_DIR = APP_DIR / "ml-fastvlm"
 CHECKPOINTS_DIR = FASTVLM_DIR / "checkpoints"
 DEFAULT_DIARY_PATH = APP_DIR / "diary.json"
+DEFAULT_ERROR_PATH = APP_DIR / "error.json"
+SETTINGS_CACHE_PATH = APP_DIR / "settings_cached.json"
 DESKTOP_SYMLINK_PATH = Path.home() / "Desktop" / "diary.json"
 LOG_FILE = APP_DIR / "app.log"
 
-# FastVLM models
-MODELS = {
-    "FastVLM-0.5B": "fastvlm_0.5b_stage3",
-    "FastVLM-1.5B": "fastvlm_1.5b_stage3",
-    "FastVLM-7B": "fastvlm_7b_stage3",
+# Model providers
+PROVIDER_FASTVLM = "fastvlm"
+PROVIDER_CLAUDE = "claude"
+
+# FastVLM models (display name -> folder name)
+FASTVLM_MODELS = {
+    "FastVLM-0.5B": "llava-fastvithd_0.5b_stage3",
+    "FastVLM-1.5B": "llava-fastvithd_1.5b_stage3",
+    "FastVLM-7B": "llava-fastvithd_7b_stage3",
 }
+
+# Claude models (display name -> CLI model name)
+CLAUDE_MODELS = {
+    "Claude Opus": "opus",
+    "Claude Sonnet": "sonnet",
+    "Claude Haiku": "haiku",
+}
+
+# Combined model list for UI (display name -> (provider, identifier))
+ALL_MODELS = {
+    **{name: (PROVIDER_FASTVLM, folder) for name, folder in FASTVLM_MODELS.items()},
+    **{name: (PROVIDER_CLAUDE, model) for name, model in CLAUDE_MODELS.items()},
+}
+
+# Legacy alias for backward compatibility
+MODELS = FASTVLM_MODELS
+
+
+def get_model_provider(display_name: str) -> str | None:
+    """Get the provider for a model display name."""
+    if display_name in ALL_MODELS:
+        return ALL_MODELS[display_name][0]
+    return None
+
+
+def get_model_identifier(display_name: str) -> str | None:
+    """Get the identifier (folder name or CLI name) for a model."""
+    if display_name in ALL_MODELS:
+        return ALL_MODELS[display_name][1]
+    return None
+
+
+def get_diary_model_name(display_name: str) -> str:
+    """Get a clean model name for diary entries."""
+    provider = get_model_provider(display_name)
+    if provider == PROVIDER_FASTVLM:
+        # fastvlm-0.5b, fastvlm-1.5b, fastvlm-7b
+        size = display_name.split("-")[1].lower()
+        return f"fastvlm-{size}"
+    elif provider == PROVIDER_CLAUDE:
+        # claude-opus, claude-sonnet, claude-haiku
+        model = display_name.split(" ")[1].lower()
+        return f"claude-{model}"
+    return display_name.lower()
 
 # Interval settings (in seconds)
 MIN_INTERVAL = 5
