@@ -6,7 +6,7 @@ A macOS app that periodically captures your screen and uses AI to describe what 
 
 - **Automatic screen capture** at configurable intervals (5s - 5min)
 - **Multiple AI backends**:
-  - FastVLM (local, runs on Apple Silicon/Intel via conda)
+  - [FastVLM](https://github.com/apple/ml-fastvlm) (local, runs on Apple Silicon/Intel via conda)
   - Claude (via Claude CLI - opus, sonnet, haiku)
 - **Activity diary** saved as JSON with timestamps and inference times
 - **Clickable preview** - click thumbnail to open full screenshot
