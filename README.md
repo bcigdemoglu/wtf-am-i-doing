@@ -26,6 +26,14 @@ A macOS app that periodically captures your screen and uses AI to describe what 
 ./build.sh
 ```
 
+## Release
+
+```bash
+./release.sh 1.0.0
+```
+
+Creates a GitHub release with the built `.app` bundle.
+
 ## Run
 
 ```bash
