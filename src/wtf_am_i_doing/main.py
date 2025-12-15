@@ -405,9 +405,8 @@ class WTFApp:
                 logger.info("Downloading model checkpoints...")
                 inference.download_models(self._update_status)
 
-                self._update_status("Setup complete!")
-                logger.info("Setup completed successfully!")
-                self.root.after(0, lambda: messagebox.showinfo("Success", "Models downloaded successfully!"))
+                self._update_status("Check Terminal for download progress")
+                logger.info("Terminal opened for model download")
             except inference.SetupError as e:
                 logger.error(f"Setup failed: {e}")
                 self._update_status("Setup failed")

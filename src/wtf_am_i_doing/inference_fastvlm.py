@@ -267,7 +267,7 @@ def install_fastvlm_deps(progress_callback: Callable[[str], None] | None = None)
 
 def download_models(progress_callback: Callable[[str], None] | None = None) -> None:
     """
-    Download FastVLM model checkpoints.
+    Download FastVLM model checkpoints by opening a Terminal window.
 
     Args:
         progress_callback: Optional callback for progress updates
@@ -278,26 +278,69 @@ def download_models(progress_callback: Callable[[str], None] | None = None) -> N
     if not is_fastvlm_cloned():
         raise FastVLMSetupError("FastVLM is not cloned. Clone it first.")
 
-    if progress_callback:
-        progress_callback("Downloading models (this will take a while, grab a coffee)...")
-
     get_models_script = FASTVLM_DIR / "get_models.sh"
 
     if not get_models_script.exists():
         raise FastVLMSetupError("get_models.sh not found in FastVLM directory.")
 
+    if progress_callback:
+        progress_callback("Opening Terminal to download models...")
+
     try:
-        result = subprocess.run(
-            ["bash", str(get_models_script)],
-            cwd=str(FASTVLM_DIR),
-            capture_output=True,
-            text=True,
-            check=True,
-        )
+        # Create a wrapper script that shows progress and waits
+        wrapper_script = FASTVLM_DIR / "download_wrapper.sh"
+        wrapper_script.write_text(f'''#!/bin/bash
+cd "{FASTVLM_DIR}"
+echo "========================================="
+echo "  Downloading FastVLM Models"
+echo "========================================="
+echo ""
+
+# Check if models already exist
+CHECKPOINTS_DIR="{CHECKPOINTS_DIR}"
+if [ -d "$CHECKPOINTS_DIR" ] && [ "$(ls -A "$CHECKPOINTS_DIR" 2>/dev/null)" ]; then
+    echo "WARNING: Models already exist in checkpoints folder!"
+    echo ""
+    ls -la "$CHECKPOINTS_DIR"
+    echo ""
+    read -p "Do you want to re-download and overwrite? (y/N): " confirm
+    if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+        echo ""
+        echo "Download cancelled."
+        echo "Press any key to exit..."
+        read -n 1
+        exit 0
+    fi
+    echo ""
+fi
+
+echo "This will download ~10GB of model files."
+echo "Please wait for the download to complete."
+echo ""
+bash get_models.sh
+echo ""
+echo "========================================="
+echo "  Download complete!"
+echo "========================================="
+echo ""
+echo "You can close this terminal window now."
+echo "Press any key to exit..."
+read -n 1
+''')
+        wrapper_script.chmod(0o755)
+
+        # Open Terminal.app with the wrapper script
+        subprocess.run([
+            "open", "-a", "Terminal", str(wrapper_script)
+        ], check=True)
+
         if progress_callback:
-            progress_callback("Models downloaded successfully.")
+            progress_callback("Terminal opened. Check the Terminal window for download progress.")
+
     except subprocess.CalledProcessError as e:
-        raise FastVLMSetupError(f"Failed to download models: {e.stderr}")
+        raise FastVLMSetupError(f"Failed to open Terminal: {e}")
+    except Exception as e:
+        raise FastVLMSetupError(f"Failed to download models: {str(e)}")
 
 
 def run_inference(
@@ -419,4 +462,4 @@ def full_setup(progress_callback: Callable[[str], None] | None = None) -> None:
     download_models(progress_callback)
 
     if progress_callback:
-        progress_callback("Setup complete! All models are ready.")
+        progress_callback("Check Terminal window for download progress.")
