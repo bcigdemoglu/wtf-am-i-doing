@@ -85,7 +85,15 @@ RESOLUTIONS = {
 }
 
 # Default prompt
-DEFAULT_PROMPT = "Describe what the user is doing on their computer screen."
+DEFAULT_PROMPT = """Describe the current screen in 6 lines max. Do not guess. If unclear, say "unclear" and keep going.
+
+Format:
+Task:
+Active: <app or site + page/view>
+Focus: <top 2 windows/panels>
+Inputs: <what user is typing/selecting, if visible>
+Evidence: "<exact quote 1>" | "<exact quote 2>" (only if clearly readable)
+Confidence: High/Med/Low (one short reason)"""
 
 # FastVLM repo
 FASTVLM_REPO = "apple/ml-fastvlm"

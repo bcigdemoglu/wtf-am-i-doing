@@ -237,14 +237,18 @@ class WTFApp:
         )
         res_combo.pack(side=tk.LEFT, padx=5)
 
-        # Prompt row
-        prompt_frame = ttk.Frame(settings_frame)
+        # Prompt section (expandable)
+        prompt_frame = ttk.LabelFrame(settings_frame, text="Prompt", padding="5")
         prompt_frame.pack(fill=tk.X, pady=2)
 
-        ttk.Label(prompt_frame, text="Prompt:").pack(side=tk.LEFT)
-        ttk.Entry(prompt_frame, textvariable=self.prompt, width=60).pack(
-            side=tk.LEFT, padx=5, expand=True, fill=tk.X
-        )
+        self.prompt_text = tk.Text(prompt_frame, height=4, wrap=tk.WORD)
+        self.prompt_text.pack(fill=tk.X, expand=True)
+        self.prompt_text.insert("1.0", self.prompt.get())
+
+        # Sync Text widget with StringVar
+        def on_prompt_change(event=None):
+            self.prompt.set(self.prompt_text.get("1.0", "end-1c"))
+        self.prompt_text.bind("<KeyRelease>", on_prompt_change)
 
         # === Control Section ===
         control_frame = ttk.Frame(main_frame)
