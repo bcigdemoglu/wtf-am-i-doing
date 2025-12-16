@@ -12,6 +12,7 @@ from .config import (
 )
 from . import inference_fastvlm
 from . import inference_claude
+from . import inference_mlx
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,7 @@ def run_inference(
     model_name: str,
     prompt: str,
     progress_callback: Callable[[str], None] | None = None,
+    use_mlx: bool = False,
 ) -> str:
     """
     Run inference on an image using the specified model.
@@ -61,6 +63,7 @@ def run_inference(
         model_name: Display name of the model (e.g., "FastVLM-0.5B" or "Claude Opus")
         prompt: Text prompt for the model
         progress_callback: Optional callback for progress updates
+        use_mlx: If True, use MLX backend for FastVLM models (Apple Silicon only)
 
     Returns:
         The model's text output
@@ -69,13 +72,18 @@ def run_inference(
         InferenceError: If inference fails
     """
     provider = get_model_provider(model_name)
-    logger.info(f"Running inference with model '{model_name}' (provider: {provider})")
+    logger.info(f"Running inference with model '{model_name}' (provider: {provider}, mlx: {use_mlx})")
 
     try:
         if provider == PROVIDER_FASTVLM:
-            return inference_fastvlm.run_inference(
-                image_path, model_name, prompt, progress_callback
-            )
+            if use_mlx:
+                return inference_mlx.run_inference(
+                    image_path, model_name, prompt, progress_callback
+                )
+            else:
+                return inference_fastvlm.run_inference(
+                    image_path, model_name, prompt, progress_callback
+                )
         elif provider == PROVIDER_CLAUDE:
             return inference_claude.run_inference(
                 image_path, model_name, prompt, progress_callback
@@ -86,6 +94,8 @@ def run_inference(
     except inference_fastvlm.FastVLMInferenceError as e:
         raise InferenceError(str(e))
     except inference_claude.ClaudeInferenceError as e:
+        raise InferenceError(str(e))
+    except inference_mlx.MLXInferenceError as e:
         raise InferenceError(str(e))
 
 
@@ -119,4 +129,23 @@ def full_setup(progress_callback: Callable[[str], None] | None = None) -> None:
     try:
         inference_fastvlm.full_setup(progress_callback)
     except inference_fastvlm.FastVLMSetupError as e:
+        raise SetupError(str(e))
+
+
+# MLX setup functions
+def is_mlx_available() -> bool:
+    """Check if MLX is available (Apple Silicon only)."""
+    return inference_mlx.is_mlx_available()
+
+
+def is_mlx_setup_complete() -> bool:
+    """Check if MLX setup is complete (mlx-vlm installed + models converted)."""
+    return inference_mlx.is_mlx_setup_complete()
+
+
+def setup_mlx(progress_callback: Callable[[str], None] | None = None) -> None:
+    """Setup MLX for Apple Silicon inference."""
+    try:
+        inference_mlx.setup_mlx(progress_callback)
+    except inference_mlx.MLXSetupError as e:
         raise SetupError(str(e))

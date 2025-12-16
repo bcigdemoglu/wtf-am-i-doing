@@ -51,6 +51,7 @@ class WTFApp:
         self.interval = tk.IntVar(value=config.DEFAULT_INTERVAL)
         self.resolution = tk.StringVar(value="High")
         self.prompt = tk.StringVar(value=config.DEFAULT_PROMPT)
+        self.use_apple_silicon = tk.BooleanVar(value=False)
 
         # Stats
         self.entry_count = tk.IntVar(value=0)
@@ -105,6 +106,8 @@ class WTFApp:
                 self.resolution.set(settings["resolution"])
             if "prompt" in settings:
                 self.prompt.set(settings["prompt"])
+            if "use_apple_silicon" in settings:
+                self.use_apple_silicon.set(settings["use_apple_silicon"])
 
             logger.info("Loaded settings from cache")
         except Exception as e:
@@ -118,6 +121,7 @@ class WTFApp:
             "interval": self.interval.get(),
             "resolution": self.resolution.get(),
             "prompt": self.prompt.get(),
+            "use_apple_silicon": self.use_apple_silicon.get(),
         }
 
         try:
@@ -185,7 +189,21 @@ class WTFApp:
         model_combo.pack(side=tk.LEFT, padx=5)
         ttk.Button(
             model_frame, text="Download FastVLM", command=self._download_models
-        ).pack(side=tk.LEFT, padx=10)
+        ).pack(side=tk.LEFT, padx=5)
+        ttk.Button(
+            model_frame, text="Setup Apple Silicon", command=self._setup_apple_silicon
+        ).pack(side=tk.LEFT, padx=5)
+
+        # Apple Silicon checkbox with availability indicator
+        mlx_available = inference.is_mlx_available()
+        mlx_indicator = "\u2713" if mlx_available else "\u2717"  # ✓ or ✗
+        mlx_text = f"Use Apple Silicon [{mlx_indicator}]"
+        self.apple_silicon_checkbox = ttk.Checkbutton(
+            model_frame,
+            text=mlx_text,
+            variable=self.use_apple_silicon,
+        )
+        self.apple_silicon_checkbox.pack(side=tk.LEFT, padx=10)
 
         # Interval row
         interval_frame = ttk.Frame(settings_frame)
@@ -419,6 +437,44 @@ class WTFApp:
         thread = threading.Thread(target=download_thread, daemon=True)
         thread.start()
 
+    def _setup_apple_silicon(self) -> None:
+        """Setup Apple Silicon (MLX) for faster inference."""
+        if not inference.is_mlx_available():
+            messagebox.showwarning(
+                "Warning",
+                "Apple Silicon acceleration is only available on Apple Silicon Macs (M1/M2/M3).\n\n"
+                "Setup may not work correctly on this machine.",
+            )
+
+        if not messagebox.askyesno(
+            "Setup Apple Silicon",
+            "This will:\n"
+            "1. Install mlx-vlm package\n"
+            "2. Convert FastVLM models to MLX format\n\n"
+            "Requires: FastVLM models already downloaded.\n\n"
+            "Continue?",
+        ):
+            return
+
+        # Run in thread to not block UI
+        def setup_thread():
+            try:
+                logger.info("Starting Apple Silicon setup...")
+                inference.setup_mlx(self._update_status)
+                self._update_status("Check Terminal for setup progress")
+                logger.info("Terminal opened for MLX setup")
+            except inference.SetupError as e:
+                logger.error(f"MLX setup failed: {e}")
+                self._update_status("Setup failed")
+                self.root.after(0, lambda: messagebox.showerror("Setup Error", str(e)))
+            except Exception as e:
+                logger.exception(f"Unexpected error during MLX setup: {e}")
+                self._update_status("Setup failed")
+                self.root.after(0, lambda: messagebox.showerror("Error", f"Unexpected error:\n{e}"))
+
+        thread = threading.Thread(target=setup_thread, daemon=True)
+        thread.start()
+
     def _update_status(self, text: str) -> None:
         """Update status text (thread-safe)."""
         self.root.after(0, lambda: self.status_text.set(text))
@@ -533,6 +589,7 @@ class WTFApp:
             prompt = self.prompt.get()
             resolution = self.resolution.get()
             diary_path = Path(self.diary_path.get())
+            use_mlx = self.use_apple_silicon.get()
 
             # Capture all monitors
             try:
@@ -573,6 +630,7 @@ class WTFApp:
                         screenshot.image_path,
                         model,
                         prompt,
+                        use_mlx=use_mlx,
                     )
                     inference_ms = int((time.time() - inference_start) * 1000)
 

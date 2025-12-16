@@ -10,6 +10,7 @@ APP_DIR = Path.home() / ".wtf-am-i-doing"
 TEMP_DIR = APP_DIR / "temp"
 FASTVLM_DIR = APP_DIR / "ml-fastvlm"
 CHECKPOINTS_DIR = FASTVLM_DIR / "checkpoints"
+MLX_CHECKPOINTS_DIR = FASTVLM_DIR / "checkpoints-mlx"
 DEFAULT_DIARY_PATH = APP_DIR / "diary.json"
 DEFAULT_ERROR_PATH = APP_DIR / "error.json"
 SETTINGS_CACHE_PATH = APP_DIR / "settings_cached.json"
@@ -151,3 +152,9 @@ def open_screen_recording_settings() -> None:
 def open_file_in_default_app(file_path: Path) -> None:
     """Open a file with the system default application."""
     subprocess.run(["open", str(file_path)])
+
+
+def is_apple_silicon() -> bool:
+    """Check if running on Apple Silicon (ARM64)."""
+    import platform
+    return platform.machine() == "arm64"
