@@ -277,15 +277,19 @@ class WTFApp:
         status_frame = ttk.LabelFrame(main_frame, text="Status", padding="5")
         status_frame.pack(fill=tk.BOTH, expand=True)
 
+        # Buttons row (above status)
+        buttons_row = ttk.Frame(status_frame)
+        buttons_row.pack(fill=tk.X, pady=(0, 5))
+        ttk.Button(buttons_row, text="Open Diary", command=self._open_diary).pack(side=tk.RIGHT)
+        ttk.Button(buttons_row, text="Open Settings", command=self._open_settings).pack(side=tk.RIGHT, padx=(0, 5))
+        ttk.Button(buttons_row, text="Open Errors", command=self._open_errors).pack(side=tk.RIGHT, padx=(0, 5))
+        ttk.Button(buttons_row, text="Open Log", command=self._open_log).pack(side=tk.RIGHT, padx=(0, 5))
+
         # Status line
         status_line = ttk.Frame(status_frame)
         status_line.pack(fill=tk.X, pady=2)
         ttk.Label(status_line, text="Status:").pack(side=tk.LEFT)
         ttk.Label(status_line, textvariable=self.status_text).pack(side=tk.LEFT, padx=5)
-        ttk.Button(status_line, text="Open Log", command=self._open_log).pack(side=tk.RIGHT)
-        ttk.Button(status_line, text="Open Errors", command=self._open_errors).pack(side=tk.RIGHT, padx=(0, 5))
-        ttk.Button(status_line, text="Open Settings", command=self._open_settings).pack(side=tk.RIGHT, padx=(0, 5))
-        ttk.Button(status_line, text="Open Diary", command=self._open_diary).pack(side=tk.RIGHT, padx=(0, 5))
 
         # Output area with thumbnail
         output_frame = ttk.Frame(status_frame)
