@@ -71,13 +71,14 @@ class WTFApp:
         # Build UI
         self._create_widgets()
 
-        # Ensure app directory exists
+        # Ensure app directory exists and create default settings
         config.ensure_app_dir()
+        config.ensure_default_settings()
 
         # Clean up any leftover temp files from previous sessions
         capture.cleanup_temp_dir()
 
-        # Load cached settings
+        # Load settings
         self._load_settings()
 
         # Update stats from existing diary
@@ -87,12 +88,12 @@ class WTFApp:
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
     def _load_settings(self) -> None:
-        """Load settings from cache file."""
-        if not config.SETTINGS_CACHE_PATH.exists():
+        """Load settings from settings file."""
+        if not config.SETTINGS_PATH.exists():
             return
 
         try:
-            with open(config.SETTINGS_CACHE_PATH, "r") as f:
+            with open(config.SETTINGS_PATH, "r") as f:
                 settings = json.load(f)
 
             if "diary_path" in settings:
@@ -106,15 +107,19 @@ class WTFApp:
                 self.resolution.set(settings["resolution"])
             if "prompt" in settings:
                 self.prompt.set(settings["prompt"])
+                # Also update the Text widget if it exists
+                if hasattr(self, 'prompt_text'):
+                    self.prompt_text.delete("1.0", tk.END)
+                    self.prompt_text.insert("1.0", settings["prompt"])
             if "use_apple_silicon" in settings:
                 self.use_apple_silicon.set(settings["use_apple_silicon"])
 
-            logger.info("Loaded settings from cache")
+            logger.info("Loaded settings from settings.json")
         except Exception as e:
             logger.warning(f"Failed to load settings: {e}")
 
     def _save_settings(self) -> None:
-        """Save current settings to cache file."""
+        """Save current settings to settings.json."""
         settings = {
             "diary_path": self.diary_path.get(),
             "model": self.selected_model.get(),
@@ -126,9 +131,9 @@ class WTFApp:
 
         try:
             config.ensure_app_dir()
-            with open(config.SETTINGS_CACHE_PATH, "w") as f:
+            with open(config.SETTINGS_PATH, "w") as f:
                 json.dump(settings, f, indent=2)
-            logger.debug("Saved settings to cache")
+            logger.debug("Saved settings to settings.json")
         except Exception as e:
             logger.warning(f"Failed to save settings: {e}")
 
@@ -279,6 +284,7 @@ class WTFApp:
         ttk.Label(status_line, textvariable=self.status_text).pack(side=tk.LEFT, padx=5)
         ttk.Button(status_line, text="Open Log", command=self._open_log).pack(side=tk.RIGHT)
         ttk.Button(status_line, text="Open Errors", command=self._open_errors).pack(side=tk.RIGHT, padx=(0, 5))
+        ttk.Button(status_line, text="Open Settings", command=self._open_settings).pack(side=tk.RIGHT, padx=(0, 5))
         ttk.Button(status_line, text="Open Diary", command=self._open_diary).pack(side=tk.RIGHT, padx=(0, 5))
 
         # Output area with thumbnail
@@ -397,6 +403,15 @@ class WTFApp:
             config.open_file_in_default_app(self.error_path)
         else:
             messagebox.showwarning("Not Found", "Error file does not exist yet (no errors recorded).")
+
+    def _open_settings(self) -> None:
+        """Open the settings file in the default application."""
+        # Save current settings first so the file is up to date
+        self._save_settings()
+        if config.SETTINGS_PATH.exists():
+            config.open_file_in_default_app(config.SETTINGS_PATH)
+        else:
+            messagebox.showwarning("Not Found", "Settings file does not exist yet.")
 
     def _download_models(self) -> None:
         """Start model download process."""

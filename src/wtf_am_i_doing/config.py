@@ -13,7 +13,8 @@ CHECKPOINTS_DIR = FASTVLM_DIR / "checkpoints"
 MLX_CHECKPOINTS_DIR = FASTVLM_DIR / "checkpoints-mlx"
 DEFAULT_DIARY_PATH = APP_DIR / "diary.json"
 DEFAULT_ERROR_PATH = APP_DIR / "error.json"
-SETTINGS_CACHE_PATH = APP_DIR / "settings_cached.json"
+SETTINGS_PATH = APP_DIR / "settings.json"
+SETTINGS_DEFAULT_PATH = APP_DIR / "settings.default.json"
 DESKTOP_SYMLINK_PATH = Path.home() / "Desktop" / "diary.json"
 LOG_FILE = APP_DIR / "app.log"
 
@@ -99,9 +100,38 @@ Confidence: High/Med/Low (one short reason)"""
 FASTVLM_REPO = "apple/ml-fastvlm"
 
 
+def get_default_settings() -> dict:
+    """Get the default settings as a dictionary."""
+    return {
+        "diary_path": str(DEFAULT_DIARY_PATH),
+        "model": "FastVLM-0.5B",
+        "interval": DEFAULT_INTERVAL,
+        "resolution": "High",
+        "prompt": DEFAULT_PROMPT,
+        "use_apple_silicon": False,
+    }
+
+
 def ensure_app_dir() -> None:
     """Create the application directory if it doesn't exist."""
     APP_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def ensure_default_settings() -> None:
+    """Create settings.default.json if it doesn't exist."""
+    import json
+    ensure_app_dir()
+    if not SETTINGS_DEFAULT_PATH.exists():
+        with open(SETTINGS_DEFAULT_PATH, "w") as f:
+            json.dump(get_default_settings(), f, indent=2)
+
+
+def open_settings_file() -> None:
+    """Open the settings file in the default application."""
+    if SETTINGS_PATH.exists():
+        open_file_in_default_app(SETTINGS_PATH)
+    elif SETTINGS_DEFAULT_PATH.exists():
+        open_file_in_default_app(SETTINGS_DEFAULT_PATH)
 
 
 def is_gh_installed() -> bool:
